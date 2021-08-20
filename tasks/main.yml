@@ -51,3 +51,19 @@
     ( not worker_mc.resources[0].status.readyMachineCount == worker_mc.resources[0].status.machineCount ) or
     ( worker_mc.resources[0].status.degradedMachineCount > 0 ) or
     ( worker_mc.resources[0].status.unavailableMachineCount > 0 )
+
+- name: Fetch machine config of control plane node to be replaced
+  community.kubernetes.k8s_info:
+    host: '{{ k8s_host }}'
+    api_key: '{{ openshift_auth_results.openshift_auth.api_key }}'
+    validate_certs: '{{ k8s_ssl_enabled }}'
+    namespace: 'openshift-machine-api'
+    api_version: 'machine.openshift.io/v1beta1'
+    kind: 'Machine'
+    name: '{{ master_to_replace }}'
+    wait: true
+  register: master_machine
+
+- name: Show master machine config
+  debug:
+    var: master_machine
