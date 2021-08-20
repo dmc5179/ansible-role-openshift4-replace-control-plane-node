@@ -31,3 +31,23 @@
     ( not master_mc.resources[0].status.readyMachineCount == master_mc.resources[0].status.machineCount ) or
     ( master_mc.resources[0].status.degradedMachineCount > 0 ) or
     ( master_mc.resources[0].status.unavailableMachineCount > 0 )
+
+- name: Get worker machine config pool
+  community.kubernetes.k8s_info:
+    host: '{{ k8s_host }}'
+    api_key: '{{ openshift_auth_results.openshift_auth.api_key }}'
+    validate_certs: '{{ k8s_ssl_enabled }}'
+    namespace: 'openshift-machine-api'
+    api_version: 'machineconfiguration.openshift.io/v1'
+    kind: 'MachineConfigPool'
+    name: 'worker'
+    wait: true
+  register: worker_mc
+
+- name: Fail if worker machine config pool is not ready
+  fail:
+    msg: "Worker Machine config is not ready"
+  when: >
+    ( not worker_mc.resources[0].status.readyMachineCount == worker_mc.resources[0].status.machineCount ) or
+    ( worker_mc.resources[0].status.degradedMachineCount > 0 ) or
+    ( worker_mc.resources[0].status.unavailableMachineCount > 0 )
