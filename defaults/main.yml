@@ -1,2 +1,7 @@
 ---
 # defaults file for ansible-role-openshift4-replace-control-plane-node
+
+k8s_ssl_enabled: false
+k8s_host: ''
+k8s_username: 'kubeadmin'
+k8s_password: ''
