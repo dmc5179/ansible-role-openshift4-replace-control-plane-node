@@ -64,6 +64,60 @@
     wait: true
   register: master_machine
 
-- name: Show master machine config
-  debug:
-    var: master_machine
+#- name: Show master machine config
+#  debug:
+#    var: master_machine
+
+- name: Write master machine config json to file
+  copy:
+    content: '{{ master_machine }}'
+    dest: '/tmp/master_mc.json'
+    force: true
+
+- name: Remove keys from master machine config
+  shell: >
+    jq '.resources | map(del(.status, .metadata.managedFields, .spec.providerID, .metadata.annotations, .metadata.generation, .metadata.resourceVersion, .metadata.uid))' '/tmp/master_mc.json'
+  register: new_master_mc
+
+- name: Write master machine config json to file
+  copy:
+    content: '{{ new_master_mc.stdout }}'
+    dest: '/tmp/master_mc.json'
+    force: true
+
+- name: Change 'metadata.name' to new name
+  shell: >
+    jq '.metadata.name = "{{ replacement_master }}"' /tmp/master_mc.json
+  register: new_master_mc
+
+- name: Write master machine config json to file
+  copy:
+    content: '{{ new_master_mc.stdout }}'
+    dest: '/tmp/master_mc.json'
+    force: true
+
+- name: Update the 'metadata.selfLink' to new name from 'metadata.name'
+  replace:
+    path: '/tmp/master_mc.json'
+    regexp: '{{ master_to_replace }}'
+    replace: '{{ replacement_master }}'
+
+# TODO
+
+# oc delete machine XXXXX-js44d-master-X -n openshift-machine-api
+# Wait a minute, then check that all operators are available, wait until they are, some will be degraded
+
+#oc get pods -n openshift-etcd | grep -v etcd-quorum-guard | grep etcd
+#oc rsh -n openshift-etcd etcd-ip-10-0-142-208.ec2.internal
+#etcdctl member list -w table
+#etcdctl member remove <ID>
+#etcdctl member list -w table
+#exit
+#oc get secrets -n openshift-etcd | grep ip-10-0-171-53.ec2.internal
+#oc delete secret -n openshift-etcd etcd-peer-ip-10-0-171-53.ec2.internal
+#oc delete secret -n openshift-etcd etcd-serving-ip-10-0-171-53.ec2.internal
+#oc delete secret -n openshift-etcd etcd-serving-metrics-ip-10-0-171-53.ec2.internal
+
+# Check that all operators are available, wait until they are, some will be degraded
+
+#oc apply -f new-master-machine-X.yaml
