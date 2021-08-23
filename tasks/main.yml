@@ -8,6 +8,24 @@
     validate_certs: '{{ k8s_ssl_enabled }}'
   register: openshift_auth_results
 
+- name: Find etcd secrets for master
+  community.kubernetes.k8s_info:
+    host: '{{ k8s_host }}'
+    api_key: '{{ openshift_auth_results.openshift_auth.api_key }}'
+    validate_certs: '{{ k8s_ssl_enabled }}'
+    namespace: 'openshift-etcd'
+    api_version: 'v1'
+    kind: 'Secret'
+    wait: true
+  register: all_secrets
+
+- name: Find secrets for {{ master_to_replace }}
+  set_fact:
+    etcd_secrets: "{{ etcd_secrets }} + [ '{{ item.metadata.name }}' ]"
+  when: ( item.metadata.name is match(".*{{master_to_replace}}.*") )
+  loop: "{{ all_secrets.resources }}"
+  no_log: true
+
 - name: Get control plane machine config pool
   community.kubernetes.k8s_info:
     host: '{{ k8s_host }}'
@@ -113,10 +131,6 @@
 #etcdctl member remove <ID>
 #etcdctl member list -w table
 #exit
-#oc get secrets -n openshift-etcd | grep ip-10-0-171-53.ec2.internal
-#oc delete secret -n openshift-etcd etcd-peer-ip-10-0-171-53.ec2.internal
-#oc delete secret -n openshift-etcd etcd-serving-ip-10-0-171-53.ec2.internal
-#oc delete secret -n openshift-etcd etcd-serving-metrics-ip-10-0-171-53.ec2.internal
 
 # Check that all operators are available, wait until they are, some will be degraded
 
